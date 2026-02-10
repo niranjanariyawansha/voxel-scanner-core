@@ -1,20 +1,24 @@
-<!---
-
-This file is used to generate your project datasheet. Please fill in the information below and delete any unused
-sections.
-
-You can also include images in this folder and reference them in the markdown. Each image must be less than
-512 kb in size, and the combined size of all images must be less than 1 MB.
--->
-
 ## How it works
 
-Explain how your project works
+The Voxel JSON Accelerator is a hardware core designed for high-throughput text processing.
+
+It implements a **64-bit parallel scanner** that processes 8 bytes per clock cycle. The core logic identifies structural JSON characters (`{`, `}`, `:`, `,`) while simultaneously tracking string state and escape sequences in parallel.
+
+**Key Features:**
+* **Zero-Stall Parsing:** Handles escaped quotes (`\"`) without pausing the pipeline.
+* **Parallel Prefix Scanning:** Uses combinatorial logic to calculate string masks instantly across 64 bits.
+* **Wrapper Logic:** For this specific Tiny Tapeout submission, the 8-bit input pins (`ui_in`) are replicated internally to fill the 64-bit bus, allowing the synthesizer to generate PPA metrics for the full 64-bit architecture.
 
 ## How to test
 
-Explain how to use your project
+1.  **Clock:** Apply a 50 MHz clock signal.
+2.  **Reset:** Pulse `rst_n` low to reset the internal state machine.
+3.  **Input:** Apply ASCII character data to `ui_in`.
+    * Example: Sending `{` (Hex `7B`) to `ui_in`.
+4.  **Output:** Observe `uo_out`.
+    * If the character is a structural element (like `{`), the corresponding bit in `uo_out` will go HIGH.
+    * If the character is inside a string (e.g., `"key"`), the bit will remain LOW.
 
 ## External hardware
 
-List external hardware used in your project (e.g. PMOD, LED display, etc), if any
+No external hardware is required to run the simulation. The design is self-contained.
