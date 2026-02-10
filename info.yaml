@@ -25,26 +25,26 @@ source_files:
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
   # Inputs
-  ui[0]: ""
-  ui[1]: ""
-  ui[2]: ""
-  ui[3]: ""
-  ui[4]: ""
-  ui[5]: ""
-  ui[6]: ""
-  ui[7]: ""
+  ui[0]: "Input Data Bit 0 (Replicated to 64-bit)"
+  ui[1]: "Input Data Bit 1 (Replicated to 64-bit)"
+  ui[2]: "Input Data Bit 2 (Replicated to 64-bit)"
+  ui[3]: "Input Data Bit 3 (Replicated to 64-bit)"
+  ui[4]: "Input Data Bit 4 (Replicated to 64-bit)"
+  ui[5]: "Input Data Bit 5 (Replicated to 64-bit)"
+  ui[6]: "Input Data Bit 6 (Replicated to 64-bit)"
+  ui[7]: "Input Data Bit 7 (Replicated to 64-bit)"
 
   # Outputs
-  uo[0]: ""
-  uo[1]: ""
-  uo[2]: ""
-  uo[3]: ""
-  uo[4]: ""
-  uo[5]: ""
-  uo[6]: ""
-  uo[7]: ""
+  uo[0]: "Structure Bitmap Bit 0"
+  uo[1]: "Structure Bitmap Bit 1"
+  uo[2]: "Structure Bitmap Bit 2"
+  uo[3]: "Structure Bitmap Bit 3"
+  uo[4]: "Structure Bitmap Bit 4"
+  uo[5]: "Structure Bitmap Bit 5"
+  uo[6]: "Structure Bitmap Bit 6"
+  uo[7]: "Structure Bitmap Bit 7"
 
-  # Bidirectional pins
+  # Bidirectional pins (We are not using these, so leave them blank)
   uio[0]: ""
   uio[1]: ""
   uio[2]: ""
@@ -53,6 +53,3 @@ pinout:
   uio[5]: ""
   uio[6]: ""
   uio[7]: ""
-
-# Do not change!
-yaml_version: 6
