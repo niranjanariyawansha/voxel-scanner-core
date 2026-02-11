@@ -40,10 +40,11 @@ The core utilizes a **Parallel Input, Parallel Output (PIPO)** architecture:
 5.  **Output:** A valid bitmap of structural tokens is released in the same clock cycle.
 
 ### Block Diagram
+
 ```mermaid
 graph LR
-    A[Data In (64-bit)] --> B[Char Classifiers]
-    B --> C[Prefix Scan Logic]
-    C --> D[Mask Generation]
-    D --> E[Output Filter]
-    E --> F[Structural Bitmap]
+    A["Data In (64-bit)"] --> B["Char Classifiers"]
+    B --> C["Prefix Scan Logic"]
+    C --> D["Mask Generation"]
+    D --> E["Output Filter"]
+    E --> F["Structural Bitmap"]
