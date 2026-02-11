@@ -5,7 +5,6 @@ on: [push, workflow_dispatch]
 jobs:
   verify_performance:
     runs-on: ubuntu-latest
-    name: Simulate at 500MHz
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -17,13 +16,8 @@ jobs:
 
       - name: Run High-Speed Simulation
         run: |
-          # Compile the benchmark testbench with your source code
-          # NOTE: Make sure the path 'src/*.v' matches where your code is!
           iverilog -o benchmark_sim -g2012 test/benchmark_tb.v src/*.v
-          
-          # Run the executable
           ./benchmark_sim
 
       - name: Publish Results
-        if: success()
-        run: echo "🎉 SUCCESS: Voxel Core verified at 500 MHz (Virtual 16nm Mode)"
+        run: echo "SUCCESS Voxel Core verified at 500 MHz"
