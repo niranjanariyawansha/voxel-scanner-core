@@ -1,45 +1,51 @@
-`default_nettype none
-`timescale 1ns / 1ps
+# SPDX-FileCopyrightText: © 2024 Niranjan Ariyawansha
+# SPDX-License-Identifier: Apache-2.0
 
-/* This testbench just instantiates the module and makes some convenient wires
-   that can be driven / tested by the cocotb test.py.
-*/
-module tb ();
+import cocotb
+from cocotb.clock import Clock
+from cocotb.triggers import ClockCycles
 
-  // Dump the signals to a VCD file. You can view it with gtkwave.
-  initial begin
-    $dumpfile("tb.vcd");
-    $dumpvars(0, tb);
-    #1;
-  end
+@cocotb.test()
+async def test_project(dut):
+    dut._log.info("Start VX-1 JSON Accelerator Test")
 
-  // Wire up the inputs and outputs:
-  reg clk;
-  reg rst_n;
-  reg ena;
-  reg [7:0] ui_in;
-  reg [7:0] uio_in;
-  wire [7:0] uo_out;
-  wire [7:0] uio_out;
-  wire [7:0] uio_oe;
+    # 1. Set the clock period to 10 us (100 KHz)
+    clock = Clock(dut.clk, 10, units="us")
+    cocotb.start_soon(clock.start())
 
-  // Replace tt_um_example with your module name:
-  tt_um_niranjanariyawansha_voxel_scanner_core user_project (
+    # 2. Reset the Core
+    dut._log.info("Resetting the chip...")
+    dut.ena.value = 1
+    dut.ui_in.value = 0
+    dut.uio_in.value = 0
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 10)
+    dut.rst_n.value = 1
 
-      // Include power ports for the Gate Level test:
-`ifdef GL_TEST
-      .VPWR(1'b1),
-      .VGND(1'b0),
-`endif
+    dut._log.info("Testing Voxel Core One behavior...")
 
-      .ui_in  (ui_in),    // Dedicated inputs
-      .uo_out (uo_out),   // Dedicated outputs
-      .uio_in (uio_in),   // IOs: Input path
-      .uio_out(uio_out),  // IOs: Output path
-      .uio_oe (uio_oe),   // IOs: Enable path (active high: 0=input, 1=output)
-      .ena    (ena),      // enable - goes high when design is selected
-      .clk    (clk),      // clock
-      .rst_n  (rst_n)     // not reset
-  );
+    # TEST 1: Identify structural character '{' (Hex 0x7B)
+    # The VX-1 replicates this 8-bit input to all 64 bits of the internal bus.
+    dut.ui_in.value = 0x7B
+    await ClockCycles(dut.clk, 1)
+    
+    # Since '{' is a structural element, the bitmap should flag all 8 bytes.
+    # Expected output: 11111111 in binary (0xFF in Hex).
+    dut._log.info(f"Input: {{ (0x7B) | Output: {hex(int(dut.uo_out.value))}")
+    assert dut.uo_out.value == 0xFF
 
-endmodule
+    # TEST 2: Identify structural character ':' (Hex 0x3A)
+    dut.ui_in.value = 0x3A
+    await ClockCycles(dut.clk, 1)
+    assert dut.uo_out.value == 0xFF
+
+    # TEST 3: Ignore non-structural character 'A' (Hex 0x41)
+    dut.ui_in.value = 0x41
+    await ClockCycles(dut.clk, 1)
+    
+    # 'A' is not structural, so the output bitmap should be empty.
+    # Expected output: 0x00.
+    dut._log.info(f"Input: A (0x41) | Output: {hex(int(dut.uo_out.value))}")
+    assert dut.uo_out.value == 0x00
+
+    dut._log.info("✅ All VX-1 core tests passed!")
