@@ -6,11 +6,11 @@ from cocotb.triggers import ClockCycles, RisingEdge
 async def test_vx1_structural_scan(dut):
     dut._log.info("Start VX-1 JSON Accelerator Test")
 
-    # 1. Set a 50 MHz clock (20ns period) to match your real specs
+    # 1. Set a 50 MHz clock (20ns period) to match your info.yaml
     clock = Clock(dut.clk, 20, units="ns")
     cocotb.start_soon(clock.start())
 
-    # 2. Initialize inputs to 0 to avoid 'x' propagation
+    # 2. Initialize inputs to 0 to prevent 'x' propagation
     dut.ui_in.value = 0
     dut.uio_in.value = 0
     dut.ena.value = 1
@@ -18,11 +18,11 @@ async def test_vx1_structural_scan(dut):
     # 3. Reset the Core
     dut._log.info("Applying Reset...")
     dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 5) # Hold reset for 5 cycles
+    await ClockCycles(dut.clk, 5) 
     dut.rst_n.value = 1
     
     # IMPORTANT: Wait for one rising edge so the reset values 
-    # (0s) are actually latched into the registers.
+    # are actually latched into the registers, clearing 'x' bits.
     await RisingEdge(dut.clk)
 
     dut._log.info("Testing Voxel Core One behavior...")
@@ -30,14 +30,14 @@ async def test_vx1_structural_scan(dut):
     # TEST: Identify structural character '{' (Hex 0x7B)
     dut.ui_in.value = 0x7B
     
-    # Wait 1 cycle for the data to be processed and latched into the output reg
+    # Wait 1 cycle for the data to be processed 
     await ClockCycles(dut.clk, 1)
     
-    # Read the value. We use .value.integer to handle the comparison properly.
-    output_val = dut.uo_out.value
-    dut._log.info(f"Input: 0x7B | Output: {output_val}")
+    # We use .value.integer to ensure we aren't reading 'x' strings
+    output_val = int(dut.uo_out.value)
+    dut._log.info(f"Input: 0x7B | Output: {hex(output_val)}")
 
-    # Check that all bits are 1 (since the 8-bit input is replicated to 64-bit)
+    # Check that all bits are 1 (input is replicated to 64-bit internally)
     assert output_val == 0xFF
 
-    dut._log.info("✅ SUCCESS: VX-1 identified structural token without 'x' errors!")
+    dut._log.info("✅ SUCCESS: VX-1 verified without 'x' errors!")
