@@ -1,51 +1,46 @@
-# SPDX-FileCopyrightText: © 2024 Niranjan Ariyawansha
-# SPDX-License-Identifier: Apache-2.0
+`default_nettype none
+`timescale 1ns / 1ps
 
-import cocotb
-from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles
+/* This testbench instantiates the Voxel Core and creates the wires 
+   that are driven and tested by the cocotb test.py script.
+*/
+module tb ();
 
-@cocotb.test()
-async def test_project(dut):
-    dut._log.info("Start VX-1 JSON Accelerator Test")
+  // 1. Setup Signal Dumping (Generates the .vcd file for GTKWave)
+  initial begin
+    $dumpfile("tb.vcd");
+    $dumpvars(0, tb);
+    #1;
+  end
 
-    # 1. Set the clock period to 10 us (100 KHz)
-    clock = Clock(dut.clk, 10, units="us")
-    cocotb.start_soon(clock.start())
+  // 2. Define the Signal Wires (Mapping to the TT08 Pinout)
+  reg clk;
+  reg rst_n;
+  reg ena;
+  reg [7:0] ui_in;
+  reg [7:0] uio_in;
+  wire [7:0] uo_out;
+  wire [7:0] uio_out;
+  wire [7:0] uio_oe;
 
-    # 2. Reset the Core
-    dut._log.info("Resetting the chip...")
-    dut.ena.value = 1
-    dut.ui_in.value = 0
-    dut.uio_in.value = 0
-    dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 10)
-    dut.rst_n.value = 1
+  // 3. Instantiate the Voxel Core Module
+  // Make sure this name matches your top-level module exactly!
+  tt_um_niranjanariyawansha_voxel_scanner_core user_project (
 
-    dut._log.info("Testing Voxel Core One behavior...")
+      // Required Power Ports for Gate Level (GL) Simulations
+`ifdef GL_TEST
+      .VPWR(1'b1),
+      .VGND(1'b0),
+`endif
 
-    # TEST 1: Identify structural character '{' (Hex 0x7B)
-    # The VX-1 replicates this 8-bit input to all 64 bits of the internal bus.
-    dut.ui_in.value = 0x7B
-    await ClockCycles(dut.clk, 1)
-    
-    # Since '{' is a structural element, the bitmap should flag all 8 bytes.
-    # Expected output: 11111111 in binary (0xFF in Hex).
-    dut._log.info(f"Input: {{ (0x7B) | Output: {hex(int(dut.uo_out.value))}")
-    assert dut.uo_out.value == 0xFF
+      .ui_in  (ui_in),    // Dedicated inputs (Data feed)
+      .uo_out (uo_out),   // Dedicated outputs (Bitmap result)
+      .uio_in (uio_in),   // Bidirectional Input path
+      .uio_out(uio_out),  // Bidirectional Output path
+      .uio_oe (uio_oe),   // Bidirectional Enable path
+      .ena    (ena),      // High when the design is selected
+      .clk    (clk),      // System clock
+      .rst_n  (rst_n)     // Active-low reset
+  );
 
-    # TEST 2: Identify structural character ':' (Hex 0x3A)
-    dut.ui_in.value = 0x3A
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 0xFF
-
-    # TEST 3: Ignore non-structural character 'A' (Hex 0x41)
-    dut.ui_in.value = 0x41
-    await ClockCycles(dut.clk, 1)
-    
-    # 'A' is not structural, so the output bitmap should be empty.
-    # Expected output: 0x00.
-    dut._log.info(f"Input: A (0x41) | Output: {hex(int(dut.uo_out.value))}")
-    assert dut.uo_out.value == 0x00
-
-    dut._log.info("✅ All VX-1 core tests passed!")
+endmodule
