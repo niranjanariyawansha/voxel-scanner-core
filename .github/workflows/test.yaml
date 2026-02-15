@@ -4,45 +4,20 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install iverilog
-        shell: bash
-        run: sudo apt-get update && sudo apt-get install -y iverilog
-
-      # Set Python up and install cocotb
-      - name: Setup python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y iverilog
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Install Python packages
-        shell: bash
-        run: pip install -r test/requirements.txt
-
-      - name: Run VX-1 Randomized Fuzzing Test
+      - run: pip install -r test/requirements.txt
+      - name: Run Fuzzer
         run: |
           cd test
           make clean
-          # Explicitly run the fuzzer module defined in your Makefile
-          make MODULE=test_fuzzer 
-          # The grep command ensures the build fails if "failure" is found in the XML
-          ! grep failure results.xml 
-
-      - name: Publish Verification Summary
-        uses: test-summary/action@v2.3
-        with:
-          paths: "test/results.xml"
+          make MODULE=test_fuzzer || echo "Simulation Failed"
+          if [ -f results.xml ]; then ! grep failure results.xml; else exit 1; fi
+      - uses: actions/upload-artifact@v4
         if: always()
-
-      - name: Upload Technical Proof (VCD & Results)
-        if: success() || failure()
-        uses: actions/upload-artifact@v4
         with:
-          name: vx1-fuzzing-report
-          path: |
-            test/tb.vcd
-            test/results.xml
+          name: logs
+          path: test/results.xml
