@@ -23,25 +23,26 @@ jobs:
         shell: bash
         run: pip install -r test/requirements.txt
 
-      - name: Run tests
+      - name: Run VX-1 Randomized Fuzzing Test
         run: |
           cd test
           make clean
-          make
-          # make will return success even if the test fails, so check for failure in the results.xml
-          ! grep failure results.xml
+          # Explicitly run the fuzzer module defined in your Makefile
+          make MODULE=test_fuzzer 
+          # The grep command ensures the build fails if "failure" is found in the XML
+          ! grep failure results.xml 
 
-      - name: Test Summary
+      - name: Publish Verification Summary
         uses: test-summary/action@v2.3
         with:
           paths: "test/results.xml"
         if: always()
 
-      - name: upload vcd
+      - name: Upload Technical Proof (VCD & Results)
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-vcd
+          name: vx1-fuzzing-report
           path: |
             test/tb.vcd
             test/results.xml
