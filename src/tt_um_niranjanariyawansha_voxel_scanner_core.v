@@ -11,9 +11,9 @@ module tt_um_niranjanariyawansha_voxel_scanner_core (
     input  wire [7:0] uio_in,   // IOs: Input path
     output wire [7:0] uio_out,  // IOs: Output path
     output wire [7:0] uio_oe,   // IOs: Enable path
-    input  wire       ena,      // High when design is selected
-    input  wire       clk,      // System clock
-    input  wire       rst_n     // Reset (active low)
+    input  wire       ena,      
+    input  wire       clk,      
+    input  wire       rst_n     
 );
 
     // --- 64-BIT INTERFACE ---
@@ -21,7 +21,6 @@ module tt_um_niranjanariyawansha_voxel_scanner_core (
     wire        error_detected;
     wire [7:0]  struct_bitmap_out;
 
-    // Map input to the core; 8-bit input replicated to 64-bit for parallel processing
     assign axi_tdata = {8{ui_in}};
 
     // Main Voxel Scanner Logic
@@ -38,17 +37,29 @@ module tt_um_niranjanariyawansha_voxel_scanner_core (
         .bytes_processed()
     );
 
-    // --- VX-1 GLORY PMU INTEGRATION ---
-    // These 64-bit wires track real-time performance metrics for the CTO to verify
-    wire [63:0] glory_byte_count; 
+    // --- PILLAR 1: PERFORMANCE MONITOR (PMU) ---
+    wire [63:0] glory_byte_count;
     wire [63:0] glory_cycle_count;
 
     vx1_pmu performance_monitor (
         .clk(clk),
         .rst_n(rst_n),
-        .data_valid(ena), // Snooping the 'ena' signal to track active processing time
+        .data_valid(ena),
         .byte_count(glory_byte_count),
         .cycle_count(glory_cycle_count)
+    );
+
+    // --- PILLAR 2: THERMAL & VOLTAGE SENSORS ---
+    wire [15:0] live_temp;
+    wire [15:0] live_voltage;
+    wire        hardware_signoff_met;
+
+    vx1_sensors health_monitor (
+        .clk(clk),
+        .rst_n(rst_n),
+        .core_temp(live_temp),
+        .core_voltage(live_voltage),
+        .status_ok(hardware_signoff_met)
     );
 
     // Map results: Bit 7 is Error Flag, Bits 6-0 are the structural bitmap
@@ -59,7 +70,7 @@ module tt_um_niranjanariyawansha_voxel_scanner_core (
 
 endmodule
 
-// Internal Scanner Module
+// Internal Scanner Module logic remains unchanged below...
 module voxel_scanner #( parameter CHUNK_WIDTH = 8 ) (
     input wire clk, rst_n,
     input wire [63:0] data_in,
