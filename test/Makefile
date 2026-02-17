@@ -1,7 +1,9 @@
 SIM ?= icarus
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = tt_um_niranjanariyawansha_voxel_scanner_core.v
+
+# CRITICAL: Added vx1_pmu.v to the source list
+PROJECT_SOURCES = tt_um_niranjanariyawansha_voxel_scanner_core.v vx1_pmu.v
 
 SIM_BUILD = sim_build/rtl
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
