@@ -8,7 +8,8 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y iverilog
       - name: Run 2GHz Test
         run: |
-          iverilog -o sim -g2012 test/benchmark_tb.v src/tt_um_niranjanariyawansha_voxel_scanner_core.v
+          # Added src/vx1_pmu.v to the iverilog command line
+          iverilog -o sim -g2012 test/benchmark_tb.v src/tt_um_niranjanariyawansha_voxel_scanner_core.v src/vx1_pmu.v
           ./sim > simulation.log
           cat simulation.log
       - name: Summary
