@@ -11,19 +11,20 @@ module tt_um_niranjanariyawansha_voxel_scanner_core (
     input  wire [7:0] uio_in,   // IOs: Input path
     output wire [7:0] uio_out,  // IOs: Output path
     output wire [7:0] uio_oe,   // IOs: Enable path
-    input  wire       ena,      
-    input  wire       clk,      
-    input  wire       rst_n     
+    input  wire       ena,      // High when design is selected
+    input  wire       clk,      // System clock
+    input  wire       rst_n     // Reset (active low)
 );
 
-    // --- 64-BIT INTERFACE (PILLAR 3) ---
+    // --- 64-BIT INTERFACE ---
     wire [63:0] axi_tdata;
     wire        error_detected;
     wire [7:0]  struct_bitmap_out;
 
-    // Map input to the core; for testing we use the 8-bit input replicated
-    assign axi_tdata = {8{ui_in}}; 
+    // Map input to the core; 8-bit input replicated to 64-bit for parallel processing
+    assign axi_tdata = {8{ui_in}};
 
+    // Main Voxel Scanner Logic
     voxel_scanner core_logic (
         .clk(clk),
         .rst_n(rst_n),
@@ -33,17 +34,32 @@ module tt_um_niranjanariyawansha_voxel_scanner_core (
         .struct_bitmap(struct_bitmap_out),
         .struct_valid(),
         .in_string_state(),
-        .error_flag(error_detected), // (PILLAR 4)
+        .error_flag(error_detected),
         .bytes_processed()
     );
 
-    // Map results: Bit 7 is the Error Flag, Bits 6-0 are the structural bitmap
+    // --- VX-1 GLORY PMU INTEGRATION ---
+    // These 64-bit wires track real-time performance metrics for the CTO to verify
+    wire [63:0] glory_byte_count; 
+    wire [63:0] glory_cycle_count;
+
+    vx1_pmu performance_monitor (
+        .clk(clk),
+        .rst_n(rst_n),
+        .data_valid(ena), // Snooping the 'ena' signal to track active processing time
+        .byte_count(glory_byte_count),
+        .cycle_count(glory_cycle_count)
+    );
+
+    // Map results: Bit 7 is Error Flag, Bits 6-0 are the structural bitmap
     assign uo_out = {error_detected, struct_bitmap_out[6:0]};
+
     assign uio_out = 0;
     assign uio_oe  = 0;
 
 endmodule
 
+// Internal Scanner Module
 module voxel_scanner #( parameter CHUNK_WIDTH = 8 ) (
     input wire clk, rst_n,
     input wire [63:0] data_in,
@@ -80,7 +96,8 @@ module voxel_scanner #( parameter CHUNK_WIDTH = 8 ) (
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            state_in_string <= 0; state_last_was_backslash <= 0;
+            state_in_string <= 0;
+            state_last_was_backslash <= 0;
             struct_bitmap <= 0; struct_valid <= 0; data_ready <= 1;
             error_flag <= 0; bytes_processed <= 0;
         end else if (data_valid) begin
