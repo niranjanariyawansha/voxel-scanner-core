@@ -1,35 +1,29 @@
 # Tiny Tapeout project information
-#
-# As everyone will have access to all designs, try to make it easy for someone new to your design to know what
-# it does and how to operate it. This info will be automatically collected and used to make a datasheet for the chip.
-#
-# Here is a great example: https://github.com/TinyTapeout/tinytapeout/blob/main/INFO_0000.md
-#
 # NOTE: The following lines are CRITICAL. Do not delete them.
 yaml_version: 6
-project_id: 0        # Leave this as 0. The robot assigns a real ID later.
+project_id: 0        
 
 # The documentation section
 project:
   title:        "Voxel JSON Accelerator"
   author:       "Niranjan Ariyawansha"
-  discord:      ""      # Optional: Your discord username if you want
+  discord:      ""      
   description:  "A 64-bit parallel JSON structural scanner running on FPGA/ASIC."
   language:     "Verilog"
-  clock_hz:     50000000  # 50 MHz
+  clock_hz:     50000000  # 50 MHz base clock for simulation
 
-  # How many tiles your design occupies? A single tile is about 167x108 uM.
-  tiles: "1x1"          # 1x1 is the standard free size
+  # Tiles occupied: 1x1
+  tiles: "1x1"          
 
-  # What is the top module name?
-  # This MUST match the module name in your Verilog file exactly.
+  # Top module name
   top_module:  "tt_um_niranjanariyawansha_voxel_scanner_core"
 
   # The source files for your design
   source_files:
     - "tt_um_niranjanariyawansha_voxel_scanner_core.v"
+    - "vx1_pmu.v"  # <--- NEW FILE ADDED FOR PMU GLORY LOGIC
 
-# The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
+# The pinout of your project.
 pinout:
   # Inputs
   ui[0]: "Input Data Bit 0 (Replicated to 64-bit)"
@@ -51,7 +45,7 @@ pinout:
   uo[6]: "Structure Bitmap Bit 6"
   uo[7]: "Structure Bitmap Bit 7"
 
-  # Bidirectional pins (We are not using these, so leave them blank)
+  # Bidirectional pins
   uio[0]: ""
   uio[1]: ""
   uio[2]: ""
@@ -61,7 +55,7 @@ pinout:
   uio[6]: ""
   uio[7]: ""
 
-# Do not change the following values
+# Documentation configuration
 documentation: 
   inputs:
     - "ui_in"
