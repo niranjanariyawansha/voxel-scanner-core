@@ -14,11 +14,13 @@ project:
   top_module:  "tt_um_niranjanariyawansha_voxel_scanner_core"
 
   # UPDATED SOURCE FILES: Ensuring all monitoring pillars are hardened
+# ... (Top sections remain same)
   source_files:
     - "tt_um_niranjanariyawansha_voxel_scanner_core.v"
     - "vx1_pmu.v"
-    - "vx1_sensors.v"
-    - "vx1_dfd.v"
+    - "vx1_sensors.v" # Pillar 2: Hardware Health
+    - "vx1_dfd.v"     # Pillar 3: Black Box Logic
+# ... (Rest of the file)
 
 pinout:
   # ... (Pinout mappings remain as previously defined)
