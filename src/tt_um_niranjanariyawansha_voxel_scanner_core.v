@@ -62,6 +62,17 @@ module tt_um_niranjanariyawansha_voxel_scanner_core (
         .status_ok(hardware_signoff_met)
     );
 
+    // --- PILLAR 3: DESIGN-FOR-DEBUG (DFD) ---
+    // Connects to the scanner's structural bitmap to provide trace visibility
+    wire [63:0] ai_blackbox_trace;
+
+    vx1_dfd debug_logic (
+        .clk(clk),
+        .rst_n(rst_n),
+        .internal_state(struct_bitmap_out),
+        .trace_buffer(ai_blackbox_trace)
+    );
+
     // Map results: Bit 7 is Error Flag, Bits 6-0 are the structural bitmap
     assign uo_out = {error_detected, struct_bitmap_out[6:0]};
 
@@ -70,7 +81,7 @@ module tt_um_niranjanariyawansha_voxel_scanner_core (
 
 endmodule
 
-// Internal Scanner Module logic remains unchanged below...
+// Internal Scanner Module remains as implemented
 module voxel_scanner #( parameter CHUNK_WIDTH = 8 ) (
     input wire clk, rst_n,
     input wire [63:0] data_in,
