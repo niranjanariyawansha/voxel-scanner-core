@@ -1,111 +1,23 @@
-/*
- * Copyright (c) 2024 Niranjan Ariyawansha
- * SPDX-License-Identifier: Apache-2.0
- * * Top-level wrapper for the Voxel Core One (VX-1) JSON Accelerator.
- * This version includes full signal routing for performance and telemetry pillars.
- */
-
-`default_nettype none
-
-module tt_um_niranjanariyawansha_voxel_scanner_core (
-    input  wire [7:0] ui_in,    // Dedicated inputs
-    output wire [7:0] uo_out,   // Dedicated outputs
-    input  wire [7:0] uio_in,   // IOs: Input path
-    output wire [7:0] uio_out,  // IOs: Output path
-    output wire [7:0] uio_oe,   // IOs: Enable path
-    input  wire       ena,      
-    input  wire       clk,      
-    input  wire       rst_n     
-);
-    // --- 64-BIT INTERFACE ---
-    wire [63:0] axi_tdata;
-    wire        error_detected;
-    wire [7:0]  struct_bitmap_out;
-
-    // Fixed: Dedicated wires to capture internal state outputs
-    wire        core_ready;
-    wire        core_struct_valid;
-    wire        core_string_state;
-    wire [31:0] total_bytes;
-
-    assign axi_tdata = {8{ui_in}};
-
-    // Main Voxel Scanner Logic
-    voxel_scanner core_logic (
-        .clk(clk),
-        .rst_n(rst_n),
-        .data_in(axi_tdata),
-        .data_valid(ena),
-        .data_ready(core_ready),           // Now connected
-        .struct_bitmap(struct_bitmap_out),
-        .struct_valid(core_struct_valid),   // Now connected
-        .in_string_state(core_string_state), // Now connected
-        .error_flag(error_detected),
-        .bytes_processed(total_bytes)       // Now connected
-    );
-
-    // --- PILLAR 1: PERFORMANCE MONITOR (PMU) ---
-    wire [63:0] glory_byte_count;
-    wire [63:0] glory_cycle_count;
-    vx1_pmu performance_monitor (
-        .clk(clk),
-        .rst_n(rst_n),
-        .data_valid(ena),
-        .byte_count(glory_byte_count),
-        .cycle_count(glory_cycle_count)
-    );
-
-    // --- PILLAR 2: THERMAL & VOLTAGE SENSORS ---
-    wire [15:0] live_temp;
-    wire [15:0] live_voltage;
-    wire        hardware_signoff_met;
-    vx1_sensors health_monitor (
-        .clk(clk),
-        .rst_n(rst_n),
-        .core_temp(live_temp),
-        .core_voltage(live_voltage),
-        .status_ok(hardware_signoff_met)
-    );
-
-    // --- PILLAR 3: DESIGN-FOR-DEBUG (DFD) ---
-    wire [63:0] ai_blackbox_trace;
-    vx1_dfd debug_logic (
-        .clk(clk),
-        .rst_n(rst_n),
-        .internal_state(struct_bitmap_out),
-        .trace_buffer(ai_blackbox_trace)
-    );
-
-    // Map results: Bit 7 is Error Flag, Bits 6-0 are the structural bitmap
-    assign uo_out = {error_detected, struct_bitmap_out[6:0]};
-    assign uio_out = 0;
-    assign uio_oe  = 0;
-
-    // Fixed: Dummy wire to "use" telemetry signals so the linter doesn't fail
-    wire _unused_signals = &{glory_byte_count, glory_cycle_count, live_temp, live_voltage, 
-                             hardware_signoff_met, ai_blackbox_trace, core_ready, 
-                             core_struct_valid, core_string_state, total_bytes, uio_in, 1'b0};
-
-endmodule
-
-// Internal Scanner Module
+// Internal Scanner Module - NOW FULLY PARAMETRIC
 module voxel_scanner #( parameter CHUNK_WIDTH = 8 ) (
     input wire clk, rst_n,
-    input wire [63:0] data_in,
+    input wire [(CHUNK_WIDTH*8)-1:0] data_in, // Scaled to parameter
     input wire data_valid,
     output reg data_ready,
-    output reg [7:0] struct_bitmap,
+    output reg [CHUNK_WIDTH-1:0] struct_bitmap, // Scaled to parameter
     output reg struct_valid,
-    output reg in_string_state, error_flag, // Fixed: Output reg must be driven
+    output reg in_string_state, error_flag,
     output reg [31:0] bytes_processed
 );
     reg state_in_string, state_last_was_backslash;
-    wire [7:0] is_quote, is_backslash, is_struct;
-    reg [7:0] escape_mask, string_mask;
+    
+    // Internal masks now scale automatically with CHUNK_WIDTH
+    wire [CHUNK_WIDTH-1:0] is_quote, is_backslash, is_struct;
+    reg  [CHUNK_WIDTH-1:0] escape_mask, string_mask;
 
     genvar i;
     generate
-        for (i = 0; i < 8; i = i + 1) begin : char_class
+        for (i = 0; i < CHUNK_WIDTH; i = i + 1) begin : char_class
             wire [7:0] byte_i = data_in[i*8 +: 8];
             assign is_quote[i]     = (byte_i == 8'h22);
             assign is_backslash[i] = (byte_i == 8'h5C);
@@ -118,7 +30,9 @@ module voxel_scanner #( parameter CHUNK_WIDTH = 8 ) (
     always @(*) begin
         escape_mask[0] = state_last_was_backslash;
         string_mask[0] = state_in_string ^ (is_quote[0] && !escape_mask[0]);
-        for (j = 1; j < 8; j = j + 1) begin
+        
+        // Loop now uses the CHUNK_WIDTH parameter
+        for (j = 1; j < CHUNK_WIDTH; j = j + 1) begin
             escape_mask[j] = is_backslash[j-1] && !escape_mask[j-1];
             string_mask[j] = string_mask[j-1] ^ (is_quote[j] && !escape_mask[j]);
         end
@@ -127,17 +41,20 @@ module voxel_scanner #( parameter CHUNK_WIDTH = 8 ) (
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state_in_string <= 0;
-            in_string_state <= 0; // Reset assignment added
+            in_string_state <= 0; 
             state_last_was_backslash <= 0;
             struct_bitmap <= 0; struct_valid <= 0; data_ready <= 1;
             error_flag <= 0; bytes_processed <= 0;
         end else if (data_valid) begin
-            state_in_string <= string_mask[7];
-            in_string_state <= string_mask[7]; // Output now driven
-            state_last_was_backslash <= is_backslash[7] && !escape_mask[7];
+            // Uses the last bit of the generated mask regardless of width
+            state_in_string <= string_mask[CHUNK_WIDTH-1];
+            in_string_state <= string_mask[CHUNK_WIDTH-1]; 
+            state_last_was_backslash <= is_backslash[CHUNK_WIDTH-1] && !escape_mask[CHUNK_WIDTH-1];
             struct_bitmap <= is_struct & ~string_mask;
             struct_valid <= 1;
-            bytes_processed <= bytes_processed + 8;
+            
+            // Increment logic now follows the parameter
+            bytes_processed <= bytes_processed + CHUNK_WIDTH;
         end
     end
 endmodule
